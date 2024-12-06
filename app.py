@@ -64,7 +64,7 @@ st.set_page_config(
 )
 # Streamlit app title
 st.markdown("<h1 style='text-align: center; color: #4CAF50;'>Diabetes Prediction App</h1>", unsafe_allow_html=True)
-st.write("### Hello, Rakesh! Let's predict if a Person is Diabetic or Not")
+st.write("### Hello! Let's predict if a Person is Diabetic or Not")
 st.title("Welcome to the Diabetes Prediction App!")
 st.write("This app helps predict diabetes risk based on input parameters.")
 
