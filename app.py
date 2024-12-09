@@ -5,6 +5,14 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 
+# Set Streamlit page configuration
+st.set_page_config(
+    page_title="Diabetes Prediction App",
+    page_icon="📉",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Load environment variables
 load_dotenv()
 
@@ -15,13 +23,7 @@ if api_key:
 else:
     st.warning("🚨 API key for Google Generative AI is missing. Disease analysis will not work.")
 
-# Set Streamlit page configuration
-st.set_page_config(
-    page_title="Diabetes Prediction App",
-    page_icon="📉",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+
 
 # Header Section
 st.markdown(
