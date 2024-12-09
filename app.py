@@ -1,79 +1,37 @@
-# import numpy as np
-# import pandas as pd 
-# import streamlit as st 
-# import matplotlib.pyplot as plt
-# from sklearn.preprocessing import LabelEncoder, StandardScaler
-# import joblib
-# import warnings 
-# warnings.filterwarnings('ignore')
-# data = pd.read_csv('Diabetes_Prediction (Project).csv')
-# df = data.copy()
-
-
-
-# st.markdown("<h1 style = 'color:#0802A3; text-align: center; font-family: Arial Black; font-size:42px'>DIABETES PREDICTION</h1>", unsafe_allow_html=True)
-
-# st.markdown("<h4 style = 'margin: -30px; color: #000000; text-align: center; font-family: cursive;font-size:32px'>Built By Ismail Ibitoye</h4>", unsafe_allow_html = True)
-
-# st.markdown("<br>", unsafe_allow_html = True)
-# st.image('pngwing.com (1).png', width = 350, use_column_width = True)
-# st.markdown("<br>", unsafe_allow_html = True)
-# st.markdown("<p style=font-family:Comic Sans>Diabetes prediction involves analyzing various factors such as BMI, age, and other relevant health indicators to assess the likelihood of developing diabetes. By examining these columns in a dataset, predictive models can identify patterns and correlations indicative of diabetes risk. Features like BMI, age, blood glucose levels, and family medical history are crucial predictors utilized in model development. Leveraging machine learning algorithms, such as logistic regression or decision trees, enables the creation of predictive models capable of accurately forecasting diabetes risk. The incorporation of additional factors, such as lifestyle choices and dietary habits, enhances the predictive power of the model, aiding in early detection and intervention strategies.Ultimately, the goal of diabetes prediction is to notify individual of his or her health status.</p>", 
-#              unsafe_allow_html = True)
-# st.markdown('<br>', unsafe_allow_html = True)
-# st.dataframe(data, use_container_width = True)  
-
-# st.sidebar.image('pngwing.com (2).png', caption = 'welcome user')
-
-
-
-# blood_pressure = st.sidebar.number_input('Blood_pressure_level', data['BloodPressure'].min(), data['BloodPressure'].max())
-# skin_thickness = st.sidebar.number_input('Skin_thickness', data['SkinThickness'].min(), data['SkinThickness'].max())
-# Insulin = st.sidebar.number_input('Insulin_level', data['Insulin'].min(), data['Insulin'].max())
-# bmi = st.sidebar.number_input('BMI', data['BMI'].min(), data['BMI'].max())
-# age = st.sidebar.number_input('Age', data['Age'].min(), data['Age'].max())
-# Diabetic_functionality = st.sidebar.number_input('Diabetic_Functionality', data['DiabetesPedigreeFunction'].min(), data['DiabetesPedigreeFunction'].max())
-# glucose = st.sidebar.number_input('Glucose_level', data['Glucose'].min(), data['Glucose'].max())
-
-
-# input_var = pd.DataFrame({ 'BloodPressure':[blood_pressure], 
-#                           'SkinThickness':[skin_thickness], 'Insulin':[Insulin], 'BMI':[bmi], 
-#                            'Age': [age], 'DiabetesPedigreeFunction' :[Diabetic_functionality], 'Glucose' : glucose})
-# st.dataframe(input_var)
-# model = joblib.load('diabetes.pkl')
-# prediction = st.button('Press to predict')
-
-# if prediction:
-#     predicted = model.predict(input_var)
-#     output = None
-#     if predicted == 1:
-#         output = 'Diabetic'
-#     else:
-#         output = 'Non-Diabetic'
-#     st.success(f'The result of this analysis shows that this individual is {output}')
-#     st.balloons()
-
-
 import streamlit as st
-# Customizing app appearance with Streamlit themes
+import numpy as np
+import pickle
+from dotenv import load_dotenv
+import os
+import google.generativeai as genai
+
+# Load environment variables
+load_dotenv()
+
+# Configure Google Generative AI
+api_key = os.getenv("GOOGLE_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+else:
+    st.warning("API key for Google Generative AI is missing. Disease analysis will not work.")
+
+# Set Streamlit page configuration
 st.set_page_config(
-    page_title="Diabetes Prediction",
+    page_title="Diabetes Prediction App",
     page_icon="📉",
     layout="centered",
     initial_sidebar_state="expanded"
 )
-# Streamlit app title
+
+# App title
 st.markdown("<h1 style='text-align: center; color: #4CAF50;'>Diabetes Prediction App</h1>", unsafe_allow_html=True)
-st.write("### Hello! Let's predict if a Person is Diabetic or Not")
-st.title("Welcome to the Diabetes Prediction App!")
-st.write("This app helps predict diabetes risk based on input parameters.")
+st.write("### Predict diabetes risk and get AI-powered health advice!")
 
-import streamlit as st
-import numpy as np
-import pickle
+# Initialize session state for result
+if "result" not in st.session_state:
+    st.session_state.result = None
 
-# Load your trained model (ensure you have the .pkl model in the same folder)
-# Replace 'model.pkl' with your actual trained model file
+# Load the trained model
 model_path = 'model.pkl'
 try:
     model = pickle.load(open(model_path, 'rb'))
@@ -81,45 +39,92 @@ except FileNotFoundError:
     model = None
     st.error("Trained model file not found. Please ensure 'model.pkl' is in the app directory.")
 
-# Set up the app layout
-st.title("Diabetes Prediction App")
-st.subheader("Enter all details")
-
-# Create columns for input fields
+# Input fields
+st.subheader("Enter the details:")
 col1, col2 = st.columns(2)
 
 with col1:
-    age = st.text_input("Age")
-    pregnancies = st.text_input("Pregnancies")
-    glucose = st.text_input("Glucose")
-    blood_pressure = st.text_input("Blood Pressure")
+    age = st.text_input("Age", value="")
+    pregnancies = st.text_input("Pregnancies", value="")
+    glucose = st.text_input("Glucose Level", value="")
+    blood_pressure = st.text_input("Blood Pressure Level", value="")
 
 with col2:
-    insulin = st.text_input("Insulin")
-    bmi = st.text_input("BMI")
-    skin_thickness = st.text_input("Skin Thickness")
-    dpf = st.text_input("DPF (Diabetes Pedigree Function)")
+    insulin = st.text_input("Insulin Level", value="")
+    bmi = st.text_input("BMI", value="")
+    skin_thickness = st.text_input("Skin Thickness", value="")
+    dpf = st.text_input("Diabetes Pedigree Function (DPF)", value="")
+
+# Helper function to validate numeric inputs
+def validate_inputs(inputs):
+    try:
+        return np.array([[float(i) for i in inputs]])
+    except ValueError:
+        st.error("All fields must contain valid numeric values.")
+        return None
 
 # Predict button
 if st.button("Predict"):
-    # Validate input fields
-    if not all([age, pregnancies, glucose, blood_pressure, insulin, bmi, skin_thickness, dpf]):
-        st.error("Please fill in all fields.")
-    else:
-        try:
-            # Convert inputs to floats
-            input_data = np.array([[
-                float(pregnancies), float(glucose), float(blood_pressure),
-                float(skin_thickness), float(insulin), float(bmi),
-                float(dpf), float(age)
-            ]])
+    input_data = validate_inputs([pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, dpf, age])
+    if input_data is not None:
+        if model:
+            prediction = model.predict(input_data)
+            st.session_state.result = "Diabetic" if prediction[0] == 1 else "Not Diabetic"
+            st.success(f"Prediction: {st.session_state.result}")
+        else:
+            st.error("Prediction model is not loaded.")
 
-            # Prediction
-            if model:
-                prediction = model.predict(input_data)
-                result = "Diabetic" if prediction[0] == 1 else "Not Diabetic"
-                st.success(f"Prediction: {result}")
-            else:
-                st.error("Prediction model is not loaded.")
-        except ValueError:
-            st.error("Please enter valid numeric values for all fields.")
+# Helper function to get AI response
+def get_gemini_response(prompt, user_input):
+    try:
+        # Ensure API key is set and generative model is initialized
+        if not api_key:
+            return "Error: API key is not set. Please configure it in your environment variables."
+
+        # Call the Generative AI model
+        model = genai.GenerativeModel("gemini-1.5-pro")
+        response = model.generate_content([prompt, user_input])
+
+        # Process response
+        if response and hasattr(response, "text"):
+            return response.text
+        else:
+            return "Error: No response text received from the model."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+# Analyze Disease button logic
+if st.button("Analyze Disease"):
+    if not st.session_state.result:
+        st.error("Please predict the disease first.")
+    else:
+        with st.spinner("Analyzing..."):
+            try:
+                # Prompt for AI assistance
+                prompt = """
+                You are an expert doctor. Analyze the condition based on the following prediction and provide:
+                - Likely causes of the condition.
+                - Preventive measures and care tips.
+                - Nutritional and lifestyle suggestions.
+                Avoid referencing any copyrighted material, and write the analysis in your own words.
+                write Disclaimer at the end
+                """
+                # Get AI response
+                response = get_gemini_response(prompt, st.session_state.result)
+                
+                # Display the response
+                if response.startswith("Error:"):
+                    st.error(response)
+                elif not response.strip():
+                    st.error("Received an empty response from the AI.")
+                else:
+                    st.success("Analysis Complete!")
+                    st.subheader("Detailed Response:")
+                    st.write(response)
+                    # Add a disclaimer at the end of the app
+                    
+
+            except Exception as e:
+                st.error(f"Unexpected error: {e}")
+
+
